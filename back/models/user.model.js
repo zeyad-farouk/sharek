@@ -54,6 +54,16 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+
+    // ── Password reset (forgot-password flow) ──────────────────
+    passwordResetToken: {
+      type: String,
+      select: false,   // never returned in normal queries
+    },
+    passwordResetExpire: {
+      type: Date,
+      select: false,
+    },
   },
   { timestamps: true }
 );
