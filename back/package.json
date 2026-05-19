@@ -1,27 +1,27 @@
 {
-  "name": "back",
+  "name": "sharek-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Sharek app - tool sharing & rental platform backend API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": [],
+  "keywords": ["sharek", "tool-sharing", "rental", "express", "mongodb"],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.0"
   },
   "dependencies": {
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "express-validator": "^7.3.2",
-    "lodash": "^4.18.1",
-    "mongodb": "^7.2.0",
-    "mongoose": "^9.6.2",
-    "morgan": "^1.10.1"
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^8.0.0",
+    "morgan": "^1.10.0"
   }
 }

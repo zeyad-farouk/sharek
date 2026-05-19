@@ -1,67 +1,44 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
-const validateRequest = require('../middleware/validation');
 const {
   getItems,
   getItemById,
   createItem,
   updateItem,
   deleteItem,
+  getMyItems,
 } = require('../controllers/item.controller');
+const { protect } = require('../middlewares/auth.middleware');
+const validate = require('../middlewares/validate.middleware');
 
 const router = express.Router();
 
-router.get(
-  '/',
-  [
-    query('minPrice').optional().isFloat({ min: 0 }).withMessage('minPrice must be a number >= 0'),
-    query('maxPrice').optional().isFloat({ min: 0 }).withMessage('maxPrice must be a number >= 0'),
-    query('available').optional().isBoolean().withMessage('available must be true or false'),
-  ],
-  validateRequest,
-  getItems
-);
+const CATEGORIES = ['Engineering', 'Art Tools', 'Construction', 'Design', 'Electronics', 'Clothing', 'Furniture', 'Books', 'Other'];
+const CONDITIONS = ['New', 'Used - Excellent', 'Used - Good', 'Used - Fair'];
 
-router.get('/:id', [param('id').isMongoId().withMessage('Invalid item id')], validateRequest, getItemById);
+const itemBodyValidation = [
+  body('name').trim().notEmpty().withMessage('Item name is required.').isLength({ max: 100 }).withMessage('Name too long.'),
+  body('description').trim().notEmpty().withMessage('Description is required.').isLength({ min: 10 }).withMessage('Description too short.'),
+  body('category').isIn(CATEGORIES).withMessage(`Category must be one of: ${CATEGORIES.join(', ')}.`),
+  body('condition').isIn(CONDITIONS).withMessage(`Condition must be one of: ${CONDITIONS.join(', ')}.`),
+  body('price').isFloat({ min: 0 }).withMessage('Price must be a non-negative number.'),
+  body('image').optional().isURL().withMessage('Image must be a valid URL.'),
+];
 
-router.post(
-  '/',
-  [
-    body('title').trim().notEmpty().withMessage('Title is required'),
-    body('description').trim().notEmpty().withMessage('Description is required'),
-    body('category').trim().notEmpty().withMessage('Category is required'),
-    body('condition')
-      .trim()
-      .isIn(['New', 'Used - Excellent', 'Used - Good', 'Used - Fair'])
-      .withMessage('Condition must be a valid value'),
-    body('price').isFloat({ min: 0 }).withMessage('Price must be a number greater than or equal to 0'),
-    body('imageUrl').optional().isURL().withMessage('imageUrl must be a valid URL'),
-    body('available').optional().isBoolean().withMessage('Available must be true or false'),
-  ],
-  validateRequest,
-  createItem
-);
+const mongoIdParam = (field = 'id') =>
+  param(field).isMongoId().withMessage(`Invalid ${field} format.`);
 
-router.put(
-  '/:id',
-  [
-    param('id').isMongoId().withMessage('Invalid item id'),
-    body('title').optional().trim().notEmpty().withMessage('Title cannot be empty'),
-    body('description').optional().trim().notEmpty().withMessage('Description cannot be empty'),
-    body('category').optional().trim().notEmpty().withMessage('Category cannot be empty'),
-    body('condition')
-      .optional()
-      .trim()
-      .isIn(['New', 'Used - Excellent', 'Used - Good', 'Used - Fair'])
-      .withMessage('Condition must be a valid value'),
-    body('price').optional().isFloat({ min: 0 }).withMessage('Price must be a number greater than or equal to 0'),
-    body('imageUrl').optional().isURL().withMessage('imageUrl must be a valid URL'),
-    body('available').optional().isBoolean().withMessage('Available must be true or false'),
-  ],
-  validateRequest,
-  updateItem
-);
+// Public — read access
+router.get('/', getItems);
+router.get('/my', protect, getMyItems);  // Must be before /:id
+router.get('/:id', mongoIdParam(), validate, getItemById);
 
-router.delete('/:id', [param('id').isMongoId().withMessage('Invalid item id')], validateRequest, deleteItem);
+// Protected — write access
+router.post('/', protect, itemBodyValidation, validate, createItem);
+router.put('/:id', protect, mongoIdParam(), [
+  ...itemBodyValidation.map((v) => v.optional()),
+  body('available').optional().isBoolean().withMessage('Available must be a boolean.'),
+], validate, updateItem);
+router.delete('/:id', protect, mongoIdParam(), validate, deleteItem);
 
 module.exports = router;

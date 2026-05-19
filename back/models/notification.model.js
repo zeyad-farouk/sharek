@@ -1,18 +1,54 @@
 const mongoose = require('mongoose');
 
+const NOTIFICATION_TYPES = ['success', 'alert', 'message', 'system'];
+
 const notificationSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true },
-    body: { type: String, required: true, trim: true },
+    // Recipient user
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User reference is required'],
+    },
+    title: {
+      type: String,
+      required: [true, 'Title is required'],
+      trim: true,
+      maxlength: [100, 'Title cannot exceed 100 characters'],
+    },
+    body: {
+      type: String,
+      required: [true, 'Body is required'],
+      trim: true,
+      maxlength: [500, 'Body cannot exceed 500 characters'],
+    },
+    // Matches Flutter NotificationType enum exactly
     type: {
       type: String,
-      required: true,
-      enum: ['success', 'alert', 'message', 'system'],
+      enum: { values: NOTIFICATION_TYPES, message: `Type must be one of: ${NOTIFICATION_TYPES.join(', ')}` },
+      required: [true, 'Type is required'],
     },
-    isRead: { type: Boolean, default: false },
-    relatedItem: { type: String, trim: true, default: '' },
+    // Related item name — shown in notification body
+    relatedItem: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    isRead: {
+      type: Boolean,
+      default: false,
+    },
+    // For alert-type notifications (rental requests): accept/decline state
+    actionTaken: {
+      type: String,
+      enum: ['none', 'accepted', 'declined'],
+      default: 'none',
+    },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.models.Notification || mongoose.model('Notification', notificationSchema);
+// Index for user-specific notification queries
+notificationSchema.index({ user: 1, createdAt: -1 });
+
+module.exports = mongoose.model('Notification', notificationSchema);

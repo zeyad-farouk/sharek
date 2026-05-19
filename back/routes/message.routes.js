@@ -1,53 +1,39 @@
 const express = require('express');
-const { body, param, query } = require('express-validator');
-const validateRequest = require('../middleware/validation');
+const { body, param } = require('express-validator');
 const {
-  getMessages,
-  getMessageById,
-  createMessage,
-  updateMessage,
+  getConversations,
+  getThread,
+  sendMessage,
   deleteMessage,
+  markAsRead,
 } = require('../controllers/message.controller');
+const { protect } = require('../middlewares/auth.middleware');
+const validate = require('../middlewares/validate.middleware');
 
 const router = express.Router();
 
-router.get(
-  '/',
-  [
-    query('unread').optional().isBoolean().withMessage('unread must be true or false'),
-  ],
-  validateRequest,
-  getMessages
-);
+// All message routes require authentication
+router.use(protect);
 
-router.get('/:id', [param('id').isMongoId().withMessage('Invalid message id')], validateRequest, getMessageById);
+// Conversation list (for Flutter MessagesPage)
+router.get('/conversations', getConversations);
 
-router.post(
-  '/',
-  [
-    body('sender').trim().notEmpty().withMessage('Sender is required'),
-    body('receiver').trim().notEmpty().withMessage('Receiver is required'),
-    body('text').trim().notEmpty().withMessage('Text is required'),
-    body('itemName').optional().trim(),
-    body('isRead').optional().isBoolean().withMessage('isRead must be true or false'),
-  ],
-  validateRequest,
-  createMessage
-);
+// Thread with a specific user (for Flutter ChatDetailPage)
+router.get('/thread/:userId', [
+  param('userId').isMongoId().withMessage('Invalid user ID.'),
+], validate, getThread);
 
-router.put(
-  '/:id',
-  [
-    param('id').isMongoId().withMessage('Invalid message id'),
-    body('sender').optional().trim().notEmpty().withMessage('Sender cannot be empty'),
-    body('receiver').optional().trim().notEmpty().withMessage('Receiver cannot be empty'),
-    body('text').optional().trim().notEmpty().withMessage('Text cannot be empty'),
-    body('isRead').optional().isBoolean().withMessage('isRead must be true or false'),
-  ],
-  validateRequest,
-  updateMessage
-);
+// Send a message
+router.post('/', [
+  body('receiverId').isMongoId().withMessage('Invalid receiver ID.'),
+  body('text').trim().notEmpty().withMessage('Message text cannot be empty.').isLength({ max: 2000 }).withMessage('Message too long.'),
+  body('itemId').optional().isMongoId().withMessage('Invalid item ID.'),
+], validate, sendMessage);
 
-router.delete('/:id', [param('id').isMongoId().withMessage('Invalid message id')], validateRequest, deleteMessage);
+// Mark message as read
+router.put('/:id/read', param('id').isMongoId().withMessage('Invalid message ID.'), validate, markAsRead);
+
+// Delete a message
+router.delete('/:id', param('id').isMongoId().withMessage('Invalid message ID.'), validate, deleteMessage);
 
 module.exports = router;
